@@ -1,0 +1,33 @@
+juce_add_plugin(FuzzBass
+    COMPANY_NAME                "yourcompany"
+    IS_SYNTH                    FALSE
+    NEEDS_MIDI_INPUT            FALSE
+    NEEDS_MIDI_OUTPUT           FALSE
+    IS_MIDI_EFFECT              FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    PLUGIN_MANUFACTURER_CODE    Manu
+    PLUGIN_CODE                 FzBs
+    FORMATS                     VST3 Standalone
+    PRODUCT_NAME                "Fuzz Bass")
+
+target_sources(FuzzBass
+    PRIVATE
+        Source/PluginProcessor.cpp)
+
+juce_generate_juce_header(FuzzBass)
+
+target_compile_definitions(FuzzBass
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_DISPLAY_SPLASH_SCREEN=0)
+
+target_link_libraries(FuzzBass
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_dsp
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags)

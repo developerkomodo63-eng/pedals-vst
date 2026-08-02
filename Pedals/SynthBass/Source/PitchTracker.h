@@ -29,12 +29,24 @@ public:
         newPitchAvailable = false;
         lastFrequencyHz = 0.0f;
         lastRms = 0.0f;
+        confirmedFrequencyHz = 0.0f;
+        previousRawFrequencyHz = 0.0f;
+
+        // pasa-altos de una sola muestra para sacar ruido de baja frecuencia
+        // (ruido de piso, golpes del cuerpo) antes de analizar el pitch
+        const float cutoffHz = minFreqHz * 0.5f;
+        hpCoeff = std::exp (-2.0f * juce::MathConstants<float>::pi * cutoffHz / (float) sampleRate);
+        hpX1 = hpY1 = 0.0f;
     }
 
     void pushSample (float sample) noexcept
     {
+        const float filtered = sample - hpX1 + hpCoeff * hpY1;
+        hpX1 = sample;
+        hpY1 = filtered;
+
         if (fillPos < windowSize)
-            buffer[(size_t) fillPos++] = sample;
+            buffer[(size_t) fillPos++] = filtered;
 
         if (fillPos >= windowSize)
         {
@@ -88,7 +100,7 @@ private:
                 : 1.0f;
         }
 
-        constexpr float threshold = 0.15f;
+        constexpr float threshold = 0.12f;
         int bestTau = -1;
         for (int tau = tauMin; tau < tauMax; ++tau)
         {
@@ -97,6 +109,27 @@ private:
                 bestTau = tau;
                 break;
             }
+        }
+
+        // si no hubo ningun dip claro por debajo del umbral estricto, nos
+        // quedamos con el minimo global de todos modos (siempre que sea
+        // razonablemente periodico); evita cortes de tracking en notas
+        // con timbre mas complejo, a costa de algo de precision en ese caso
+        if (bestTau < 0)
+        {
+            float minValue = 1.0f;
+            int minTau = -1;
+            for (int tau = tauMin; tau <= tauMax; ++tau)
+            {
+                if (cmndf[(size_t) tau] < minValue)
+                {
+                    minValue = cmndf[(size_t) tau];
+                    minTau = tau;
+                }
+            }
+
+            if (minTau > 0 && minValue < 0.35f)
+                bestTau = minTau;
         }
 
         if (bestTau < 0)
@@ -118,7 +151,29 @@ private:
                 refinedTau += 0.5f * (s0 - s2) / denom;
         }
 
-        lastFrequencyHz = (refinedTau > 0.0f) ? (float) (sampleRate / refinedTau) : 0.0f;
+        const float rawFrequencyHz = (refinedTau > 0.0f) ? (float) (sampleRate / refinedTau) : 0.0f;
+
+        // debounce: solo confirmamos una nota nueva si dos hops seguidos
+        // coinciden dentro de +-6% (~1 semitono). Esto filtra los errores
+        // de octava y el jitter de un solo hop que suelen venir de pulsaciones
+        // ruidosas, a costa de un hop extra de latencia en notas nuevas.
+        bool accept = false;
+        if (confirmedFrequencyHz <= 0.0f)
+        {
+            accept = true; // primera deteccion: sin nota previa, no hay nada que debounce-ar
+        }
+        else if (previousRawFrequencyHz > 0.0f)
+        {
+            const float ratio = rawFrequencyHz / previousRawFrequencyHz;
+            if (ratio > 0.94f && ratio < 1.06f)
+                accept = true;
+        }
+
+        if (accept)
+            confirmedFrequencyHz = rawFrequencyHz;
+
+        previousRawFrequencyHz = rawFrequencyHz;
+        lastFrequencyHz = confirmedFrequencyHz;
         newPitchAvailable = true;
     }
 
@@ -133,4 +188,11 @@ private:
     bool newPitchAvailable = false;
     float lastFrequencyHz = 0.0f;
     float lastRms = 0.0f;
+
+    // debounce de octava/jitter
+    float confirmedFrequencyHz = 0.0f;
+    float previousRawFrequencyHz = 0.0f;
+
+    // pasa-altos de pre-filtrado
+    float hpCoeff = 0.0f, hpX1 = 0.0f, hpY1 = 0.0f;
 };

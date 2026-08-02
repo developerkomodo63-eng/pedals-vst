@@ -1,14 +1,12 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PitchTracker.h"
-#include "Oscillator.h"
 
-class SynthGuitarAudioProcessor : public juce::AudioProcessor
+class FuzzBassAudioProcessor : public juce::AudioProcessor
 {
 public:
-    SynthGuitarAudioProcessor();
-    ~SynthGuitarAudioProcessor() override;
+    FuzzBassAudioProcessor();
+    ~FuzzBassAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -40,25 +38,18 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
-    PitchTracker pitchTracker;
+    juce::dsp::StateVariableTPTFilter<float> hpFilter;
+    juce::dsp::StateVariableTPTFilter<float> lpFilter;
 
-    // motor de 3 voces: principal + unisono desafinado (ancho) + sub una
-    // octava abajo (cuerpo). Cada oscilador PolyBLEP es muy barato, asi que
-    // sumar dos mas no compromete lo liviano del plugin.
-    BlepOscillator oscillatorMain;
-    BlepOscillator oscillatorUnison;
-    BlepOscillator oscillatorSub;
+    // el fuzz genera muchos mas armonicos que una distorsion tipo drive,
+    // asi que el oversampling importa mas aca para controlar el aliasing
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
 
-    // suavizado de frecuencia (glide/portamento) hecho a mano: un solo polo,
-    // asi cambiar el tiempo de glide en caliente no "salta" el valor actual
-    float smoothedFreqValue = 220.0f;
+    std::vector<float> dcBlockerX1, dcBlockerY1;
+    static constexpr float dcBlockerR = 0.995f;
+    juce::AudioBuffer<float> dryBuffer;
 
-    // seguidor de envolvente simple (un polo, ataque/release distintos)
-    // que abre y cierra el volumen del synth segun la señal de entrada
-    float envelopeState = 0.0f;
-    float attackCoeff = 0.0f, releaseCoeff = 0.0f;
+    float processFuzzSample (float x, float hardness, float bias) noexcept;
 
-    float currentTargetFrequency = 220.0f;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthGuitarAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FuzzBassAudioProcessor)
 };

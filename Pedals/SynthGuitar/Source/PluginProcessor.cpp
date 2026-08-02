@@ -16,6 +16,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout SynthGuitarAudioProcessor::c
         juce::NormalisableRange<float> { 0.0f, 200.0f, 0.0f, 0.5f }, 20.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "DETUNE", 1 }, "Detune",
+        juce::NormalisableRange<float> { 0.0f, 50.0f }, 12.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "SUBLEVEL", 1 }, "Sub Level", 0.0f, 1.0f, 0.3f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "GATE", 1 }, "Gate", -60.0f, -10.0f, -35.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -53,8 +60,12 @@ void SynthGuitarAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // afinaciones bajas) hasta bien arriba del diapason
     pitchTracker.prepare (sampleRate, 2048, 1024, 70.0f, 1200.0f);
 
-    oscillator.setSampleRate (sampleRate);
-    oscillator.reset();
+    oscillatorMain.setSampleRate (sampleRate);
+    oscillatorMain.reset();
+    oscillatorUnison.setSampleRate (sampleRate);
+    oscillatorUnison.reset();
+    oscillatorSub.setSampleRate (sampleRate);
+    oscillatorSub.reset();
 
     smoothedFreqValue = 220.0f;
     currentTargetFrequency = 220.0f;
@@ -100,14 +111,22 @@ void SynthGuitarAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, numSamples);
 
-    const int waveform   = (int) apvts.getRawParameterValue ("WAVEFORM")->load();
-    const int octave     = (int) apvts.getRawParameterValue ("OCTAVE")->load();
-    const float glideMs  = apvts.getRawParameterValue ("GLIDE")->load();
-    const float gateDb   = apvts.getRawParameterValue ("GATE")->load();
-    const float mix      = apvts.getRawParameterValue ("MIX")->load();
-    const float levelDb  = apvts.getRawParameterValue ("LEVEL")->load();
+    const int waveform    = (int) apvts.getRawParameterValue ("WAVEFORM")->load();
+    const int octave      = (int) apvts.getRawParameterValue ("OCTAVE")->load();
+    const float glideMs   = apvts.getRawParameterValue ("GLIDE")->load();
+    const float detuneCts = apvts.getRawParameterValue ("DETUNE")->load();
+    const float subLevel  = apvts.getRawParameterValue ("SUBLEVEL")->load();
+    const float gateDb    = apvts.getRawParameterValue ("GATE")->load();
+    const float mix       = apvts.getRawParameterValue ("MIX")->load();
+    const float levelDb   = apvts.getRawParameterValue ("LEVEL")->load();
 
-    oscillator.setWaveform (waveform);
+    oscillatorMain.setWaveform (waveform);
+    oscillatorUnison.setWaveform (waveform);
+    // el sub siempre suena mejor en cuadrada/senoidal (mas fundamental,
+    // menos armonicos altos peleando con la nota principal)
+    oscillatorSub.setWaveform (1);
+
+    const float detuneRatio = std::pow (2.0f, detuneCts / 1200.0f);
 
     // coeficiente de suavizado exponencial para el glide; se recalcula si
     // el parametro cambio, sin resetear el valor actual (sin saltos)
@@ -145,8 +164,18 @@ void SynthGuitarAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         const float gateAmount = (envelopeState > gateLevel) ? 1.0f : (envelopeState / juce::jmax (gateLevel, 1.0e-6f));
 
         smoothedFreqValue = currentTargetFrequency + glideCoeff * (smoothedFreqValue - currentTargetFrequency);
-        oscillator.setFrequency (smoothedFreqValue);
-        const float synthSample = oscillator.getNextSample() * envelopeState * gateAmount * 3.0f;
+
+        oscillatorMain.setFrequency (smoothedFreqValue);
+        oscillatorUnison.setFrequency (smoothedFreqValue * detuneRatio);
+        oscillatorSub.setFrequency (smoothedFreqValue * 0.5f);
+
+        // pesos fijos entre voces: principal siempre presente, unisono al
+        // 70% (da ancho sin lavar la afinacion), sub escalado por su propio knob
+        const float voicesSum = oscillatorMain.getNextSample()
+                               + oscillatorUnison.getNextSample() * 0.7f
+                               + oscillatorSub.getNextSample() * subLevel;
+
+        const float synthSample = voicesSum * envelopeState * gateAmount * 1.6f;
 
         for (int channel = 0; channel < totalNumInputChannels; ++channel)
         {

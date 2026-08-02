@@ -41,7 +41,13 @@ public:
 
 private:
     PitchTracker pitchTracker;
-    BlepOscillator oscillator;
+
+    // motor de 3 voces: principal + unisono desafinado (ancho) + sub una
+    // octava abajo (cuerpo). Cada oscilador PolyBLEP es muy barato, asi que
+    // sumar dos mas no compromete lo liviano del plugin.
+    BlepOscillator oscillatorMain;
+    BlepOscillator oscillatorUnison;
+    BlepOscillator oscillatorSub;
 
     // suavizado de frecuencia (glide/portamento) hecho a mano: un solo polo,
     // asi cambiar el tiempo de glide en caliente no "salta" el valor actual
