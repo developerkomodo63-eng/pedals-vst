@@ -42,3 +42,19 @@ jobs:
           path: |
             build/Pedals/Reverb/Reverb_artefacts/Release/VST3/**
             build/Pedals/Reverb/Reverb_artefacts/Release/Standalone/**
+
+      - name: Subir Synth Guitar (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SynthGuitar-Windows
+          path: |
+            build/Pedals/SynthGuitar/SynthGuitar_artefacts/Release/VST3/**
+            build/Pedals/SynthGuitar/SynthGuitar_artefacts/Release/Standalone/**
+
+      - name: Subir Synth Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SynthBass-Windows
+          path: |
+            build/Pedals/SynthBass/SynthBass_artefacts/Release/VST3/**
+            build/Pedals/SynthBass/SynthBass_artefacts/Release/Standalone/**
