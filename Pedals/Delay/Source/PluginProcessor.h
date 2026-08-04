@@ -2,11 +2,11 @@
 
 #include <JuceHeader.h>
 
-class ChorusAudioProcessor : public juce::AudioProcessor
+class DelayAudioProcessor : public juce::AudioProcessor
 {
 public:
-    ChorusAudioProcessor();
-    ~ChorusAudioProcessor() override;
+    DelayAudioProcessor();
+    ~DelayAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -23,7 +23,7 @@ public:
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 0.0; }
+    double getTailLengthSeconds() const override { return 2.5; }
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -38,18 +38,17 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
-    static constexpr float maxCentreDelayMs = 30.0f;
-    static constexpr float maxModMs = 6.0f;
-    static constexpr double maxLineMs = maxCentreDelayMs + maxModMs + 5.0;
+    static constexpr double maxDelaySeconds = 2.0;
 
-    // una sola linea de delay por canal; las "voces" del chorus son varios
-    // taps de lectura modulados leyendo de la misma linea, no lineas
-    // separadas, asi el costo de memoria no crece con la cantidad de voces
-    std::vector<std::vector<float>> lines;
+    // buffer circular por canal, reservado una sola vez en prepareToPlay
+    std::vector<std::vector<float>> delayLines;
     std::vector<int> writePos;
 
-    double sampleRate = 44100.0;
-    float masterPhase = 0.0f;
+    // filtro pasa-bajos de una sola muestra en el camino del feedback
+    // (asi las repeticiones se van oscureciendo, como un delay analogico)
+    std::vector<float> feedbackFilterState;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusAudioProcessor)
+    double sampleRate = 44100.0;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessor)
 };

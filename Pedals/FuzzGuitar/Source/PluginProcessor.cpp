@@ -8,7 +8,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout FuzzGuitarAudioProcessor::cr
         juce::ParameterID { "FUZZ", 1 }, "Fuzz", 0.0f, 1.0f, 0.7f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "DRIVE", 1 }, "Drive", 1.0f, 60.0f, 20.0f));
+        juce::ParameterID { "DRIVE", 1 }, "Drive",
+        juce::NormalisableRange<float> { 1.0f, 100.0f, 0.0f, 0.35f }, 25.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "BIAS", 1 }, "Bias", -1.0f, 1.0f, 0.0f));
@@ -98,15 +99,23 @@ float FuzzGuitarAudioProcessor::processFuzzSample (float x, float hardness, floa
 {
     const float biased = x + bias * 0.3f;
 
-    // blend entre tanh (fuzz suave, mas redondo) y clip duro (fuzz agresivo,
-    // casi cuadrado) segun el knob de Fuzz
+    // blend entre tanh (fuzz suave, mas redondo) y un clipper tipo diodo
+    // (exponencial: se acerca mucho a +-1 sin la "meseta" plana de un clip
+    // digital duro, se parece mas a como satura un fuzz real a transistores)
+    const float diodeAmount = 1.0f + hardness * 7.0f;
+    auto diodeClip = [diodeAmount] (float v) noexcept
+    {
+        const float sign = (v >= 0.0f) ? 1.0f : -1.0f;
+        return sign * (1.0f - std::exp (-diodeAmount * std::abs (v)));
+    };
+
     const float soft = std::tanh (biased);
-    const float hard = juce::jlimit (-1.0f, 1.0f, biased * 1.6f);
+    const float hard = diodeClip (biased);
     const float shaped = soft * (1.0f - hardness) + hard * hardness;
 
     const float restBias = bias * 0.3f;
     const float softRest = std::tanh (restBias);
-    const float hardRest = juce::jlimit (-1.0f, 1.0f, restBias * 1.6f);
+    const float hardRest = diodeClip (restBias);
     const float rest = softRest * (1.0f - hardness) + hardRest * hardness;
 
     return shaped - rest;

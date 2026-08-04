@@ -2,11 +2,11 @@
 
 #include <JuceHeader.h>
 
-class ChorusAudioProcessor : public juce::AudioProcessor
+class CompressorAudioProcessor : public juce::AudioProcessor
 {
 public:
-    ChorusAudioProcessor();
-    ~ChorusAudioProcessor() override;
+    CompressorAudioProcessor();
+    ~CompressorAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -38,18 +38,10 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
-    static constexpr float maxCentreDelayMs = 30.0f;
-    static constexpr float maxModMs = 6.0f;
-    static constexpr double maxLineMs = maxCentreDelayMs + maxModMs + 5.0;
+    // deteccion de nivel a partir del canal 0 (compresion "linkeada" entre
+    // canales, como suelen ser los pedales: una sola envolvente para todos)
+    float envelopeDb = -100.0f;
+    float attackCoeff = 0.0f, releaseCoeff = 0.0f;
 
-    // una sola linea de delay por canal; las "voces" del chorus son varios
-    // taps de lectura modulados leyendo de la misma linea, no lineas
-    // separadas, asi el costo de memoria no crece con la cantidad de voces
-    std::vector<std::vector<float>> lines;
-    std::vector<int> writePos;
-
-    double sampleRate = 44100.0;
-    float masterPhase = 0.0f;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CompressorAudioProcessor)
 };

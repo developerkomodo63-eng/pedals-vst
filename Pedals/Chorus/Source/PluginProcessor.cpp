@@ -6,16 +6,23 @@ juce::AudioProcessorValueTreeState::ParameterLayout ChorusAudioProcessor::create
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "RATE", 1 }, "Rate",
-        juce::NormalisableRange<float> { 0.05f, 5.0f, 0.0f, 0.4f }, 0.8f));
+        juce::NormalisableRange<float> { 0.05f, 5.0f, 0.0f, 0.4f }, 0.6f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "DEPTH", 1 }, "Depth", 0.0f, 1.0f, 0.35f));
+        juce::ParameterID { "DEPTH", 1 }, "Depth", 0.0f, 1.0f, 0.4f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "CENTREDELAY", 1 }, "Centre Delay", 1.0f, 30.0f, 8.0f));
+        juce::ParameterID { "CENTREDELAY", 1 }, "Centre Delay", 1.0f, 25.0f, 8.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID { "VOICES", 1 }, "Voices",
+        juce::StringArray { "1", "2", "3" }, 1));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "FEEDBACK", 1 }, "Feedback", -0.9f, 0.9f, 0.0f));
+        juce::ParameterID { "WIDTH", 1 }, "Stereo Width", 0.0f, 1.0f, 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "FEEDBACK", 1 }, "Feedback", -0.9f, 0.9f, 0.1f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "MIX", 1 }, "Mix", 0.0f, 1.0f, 0.5f));
@@ -41,14 +48,17 @@ ChorusAudioProcessor::~ChorusAudioProcessor()
 {
 }
 
-void ChorusAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void ChorusAudioProcessor::prepareToPlay (double sampleRateIn, int samplesPerBlock)
 {
-    juce::dsp::ProcessSpec spec;
-    spec.sampleRate = sampleRate;
-    spec.maximumBlockSize = (juce::uint32) samplesPerBlock;
-    spec.numChannels = (juce::uint32) getTotalNumOutputChannels();
+    juce::ignoreUnused (samplesPerBlock);
+    sampleRate = sampleRateIn;
+    masterPhase = 0.0f;
 
-    chorus.prepare (spec);
+    const int numChannels = juce::jmax (1, getTotalNumOutputChannels());
+    const int lineLength = (int) (maxLineMs / 1000.0 * sampleRate) + 4;
+
+    lines.assign ((size_t) numChannels, std::vector<float> ((size_t) lineLength, 0.0f));
+    writePos.assign ((size_t) numChannels, 0);
 }
 
 void ChorusAudioProcessor::releaseResources()
@@ -81,19 +91,71 @@ void ChorusAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
+    const int numSamples = buffer.getNumSamples();
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear (i, 0, numSamples);
 
-    chorus.setRate        (apvts.getRawParameterValue ("RATE")->load());
-    chorus.setDepth       (apvts.getRawParameterValue ("DEPTH")->load());
-    chorus.setCentreDelay (apvts.getRawParameterValue ("CENTREDELAY")->load());
-    chorus.setFeedback    (apvts.getRawParameterValue ("FEEDBACK")->load());
-    chorus.setMix         (apvts.getRawParameterValue ("MIX")->load());
+    const float rateHz       = apvts.getRawParameterValue ("RATE")->load();
+    const float depth        = apvts.getRawParameterValue ("DEPTH")->load();
+    const float centreDelay  = apvts.getRawParameterValue ("CENTREDELAY")->load();
+    const int voicesChoice   = (int) apvts.getRawParameterValue ("VOICES")->load();
+    const float width        = apvts.getRawParameterValue ("WIDTH")->load();
+    const float feedback     = apvts.getRawParameterValue ("FEEDBACK")->load();
+    const float mix          = apvts.getRawParameterValue ("MIX")->load();
 
-    juce::dsp::AudioBlock<float> block (buffer);
-    juce::dsp::ProcessContextReplacing<float> context (block);
-    chorus.process (context);
+    const int numVoices = voicesChoice + 1; // choice 0..2 -> 1,2,3
+    const float phaseInc = rateHz / (float) sampleRate;
+
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        masterPhase += phaseInc;
+        if (masterPhase >= 1.0f)
+            masterPhase -= 1.0f;
+
+        for (int channel = 0; channel < totalNumInputChannels; ++channel)
+        {
+            float* channelData = buffer.getWritePointer (channel);
+            auto& line = lines[(size_t) channel];
+            const int lineLength = (int) line.size();
+            int& wp = writePos[(size_t) channel];
+
+            // desfasa el LFO del canal derecho, asi las voces se mueven
+            // distinto entre L y R y el chorus se siente ancho de verdad
+            const float channelPhaseOffset = (channel == 1) ? width * 0.25f : 0.0f;
+
+            float wetSum = 0.0f;
+            for (int v = 0; v < numVoices; ++v)
+            {
+                const float voiceOffset = (float) v / (float) numVoices;
+                float phase = masterPhase + channelPhaseOffset + voiceOffset;
+                phase -= std::floor (phase);
+
+                const float modMs = depth * ChorusAudioProcessor::maxModMs
+                                     * std::sin (juce::MathConstants<float>::twoPi * phase);
+                const float delayMs = juce::jmax (0.5f, centreDelay + modMs);
+                const float delaySamples = delayMs / 1000.0f * (float) sampleRate;
+
+                float readPosF = (float) wp - delaySamples;
+                while (readPosF < 0.0f)
+                    readPosF += (float) lineLength;
+
+                const int readIdx0 = (int) readPosF;
+                const int readIdx1 = (readIdx0 + 1) % lineLength;
+                const float frac = readPosF - (float) readIdx0;
+
+                wetSum += line[(size_t) readIdx0] * (1.0f - frac) + line[(size_t) readIdx1] * frac;
+            }
+
+            const float wet = wetSum / (float) numVoices;
+            const float input = channelData[sample];
+
+            line[(size_t) wp] = input + wet * feedback;
+            wp = (wp + 1) % lineLength;
+
+            channelData[sample] = input * (1.0f - mix) + wet * mix;
+        }
+    }
 }
 
 juce::AudioProcessorEditor* ChorusAudioProcessor::createEditor()

@@ -2,11 +2,11 @@
 
 #include <JuceHeader.h>
 
-class ChorusAudioProcessor : public juce::AudioProcessor
+class DistortionBassAudioProcessor : public juce::AudioProcessor
 {
 public:
-    ChorusAudioProcessor();
-    ~ChorusAudioProcessor() override;
+    DistortionBassAudioProcessor();
+    ~DistortionBassAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -38,18 +38,23 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
-    static constexpr float maxCentreDelayMs = 30.0f;
-    static constexpr float maxModMs = 6.0f;
-    static constexpr double maxLineMs = maxCentreDelayMs + maxModMs + 5.0;
+    juce::dsp::StateVariableTPTFilter<float> hpFilter;
+    juce::dsp::StateVariableTPTFilter<float> lpFilter;
 
-    // una sola linea de delay por canal; las "voces" del chorus son varios
-    // taps de lectura modulados leyendo de la misma linea, no lineas
-    // separadas, asi el costo de memoria no crece con la cantidad de voces
-    std::vector<std::vector<float>> lines;
-    std::vector<int> writePos;
+    // scoop de medios: un filtro IIR *por canal* (compartir una sola
+    // instancia entre canales corrompe el estado interno z1/z2, mezclando
+    // el historial de L y R)
+    std::vector<juce::dsp::IIR::Filter<float>> scoopFilters;
 
-    double sampleRate = 44100.0;
-    float masterPhase = 0.0f;
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusAudioProcessor)
+    std::vector<float> dcBlockerX1, dcBlockerY1;
+    static constexpr float dcBlockerR = 0.995f;
+    juce::AudioBuffer<float> dryBuffer;
+
+    double currentSampleRate = 44100.0;
+
+    static float processDistortionSample (float x) noexcept;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DistortionBassAudioProcessor)
 };

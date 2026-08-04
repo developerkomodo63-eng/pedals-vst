@@ -19,13 +19,13 @@ jobs:
       - name: Compilar todos los pedales
         run: cmake --build build --config Release --parallel
 
-      - name: Subir Britpop (VST3 + Standalone)
+      - name: Subir Overdrive (VST3 + Standalone)
         uses: actions/upload-artifact@v4
         with:
-          name: Britpop-Windows
+          name: Overdrive-Windows
           path: |
-            build/Pedals/Britpop/Britpop_artefacts/Release/VST3/**
-            build/Pedals/Britpop/Britpop_artefacts/Release/Standalone/**
+            build/Pedals/Overdrive/Overdrive_artefacts/Release/VST3/**
+            build/Pedals/Overdrive/Overdrive_artefacts/Release/Standalone/**
 
       - name: Subir Chorus (VST3 + Standalone)
         uses: actions/upload-artifact@v4
@@ -74,3 +74,51 @@ jobs:
           path: |
             build/Pedals/FuzzBass/FuzzBass_artefacts/Release/VST3/**
             build/Pedals/FuzzBass/FuzzBass_artefacts/Release/Standalone/**
+
+      - name: Subir Distortion Guitar (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DistortionGuitar-Windows
+          path: |
+            build/Pedals/DistortionGuitar/DistortionGuitar_artefacts/Release/VST3/**
+            build/Pedals/DistortionGuitar/DistortionGuitar_artefacts/Release/Standalone/**
+
+      - name: Subir Distortion Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DistortionBass-Windows
+          path: |
+            build/Pedals/DistortionBass/DistortionBass_artefacts/Release/VST3/**
+            build/Pedals/DistortionBass/DistortionBass_artefacts/Release/Standalone/**
+
+      - name: Subir Compressor (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Compressor-Windows
+          path: |
+            build/Pedals/Compressor/Compressor_artefacts/Release/VST3/**
+            build/Pedals/Compressor/Compressor_artefacts/Release/Standalone/**
+
+      - name: Subir Tremolo (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tremolo-Windows
+          path: |
+            build/Pedals/Tremolo/Tremolo_artefacts/Release/VST3/**
+            build/Pedals/Tremolo/Tremolo_artefacts/Release/Standalone/**
+
+      - name: Subir Phaser (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Phaser-Windows
+          path: |
+            build/Pedals/Phaser/Phaser_artefacts/Release/VST3/**
+            build/Pedals/Phaser/Phaser_artefacts/Release/Standalone/**
+
+      - name: Subir Delay (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Delay-Windows
+          path: |
+            build/Pedals/Delay/Delay_artefacts/Release/VST3/**
+            build/Pedals/Delay/Delay_artefacts/Release/Standalone/**

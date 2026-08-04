@@ -2,11 +2,11 @@
 
 #include <JuceHeader.h>
 
-class ChorusAudioProcessor : public juce::AudioProcessor
+class TremoloAudioProcessor : public juce::AudioProcessor
 {
 public:
-    ChorusAudioProcessor();
-    ~ChorusAudioProcessor() override;
+    TremoloAudioProcessor();
+    ~TremoloAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -38,18 +38,12 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
-    static constexpr float maxCentreDelayMs = 30.0f;
-    static constexpr float maxModMs = 6.0f;
-    static constexpr double maxLineMs = maxCentreDelayMs + maxModMs + 5.0;
-
-    // una sola linea de delay por canal; las "voces" del chorus son varios
-    // taps de lectura modulados leyendo de la misma linea, no lineas
-    // separadas, asi el costo de memoria no crece con la cantidad de voces
-    std::vector<std::vector<float>> lines;
-    std::vector<int> writePos;
-
     double sampleRate = 44100.0;
-    float masterPhase = 0.0f;
+    float lfoPhase = 0.0f;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusAudioProcessor)
+    // suavizado del propio valor de modulacion, asi la onda cuadrada no
+    // genera clicks al pasar de golpe entre los dos niveles
+    float smoothedMod = 1.0f;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TremoloAudioProcessor)
 };

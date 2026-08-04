@@ -1,4 +1,4 @@
-juce_add_plugin(Reverb
+juce_add_plugin(Overdrive
     COMPANY_NAME                "DevKomodo"
     IS_SYNTH                    FALSE
     NEEDS_MIDI_INPUT            FALSE
@@ -6,24 +6,24 @@ juce_add_plugin(Reverb
     IS_MIDI_EFFECT              FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
-    PLUGIN_CODE                 Rvb1
+    PLUGIN_CODE                 Xbzs
     FORMATS                     VST3 Standalone
-    PRODUCT_NAME                "Reverb")
+    PRODUCT_NAME                "Overdrive")
 
-target_sources(Reverb
+target_sources(Overdrive
     PRIVATE
         Source/PluginProcessor.cpp)
 
-juce_generate_juce_header(Reverb)
+juce_generate_juce_header(Overdrive)
 
-target_compile_definitions(Reverb
+target_compile_definitions(Overdrive
     PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0)
 
-target_link_libraries(Reverb
+target_link_libraries(Overdrive
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp

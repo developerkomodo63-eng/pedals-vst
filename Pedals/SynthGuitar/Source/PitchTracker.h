@@ -132,6 +132,19 @@ private:
                 bestTau = minTau;
         }
 
+        // correccion de octava: en notas graves (tipico del bajo) el
+        // fundamental a veces es mas debil que el 2do armonico, y eso hace
+        // que YIN se "vaya una octava arriba" (elige un tau mas chico que
+        // corresponde al armonico en vez del fundamental real). Si el
+        // candidato al doble de periodo (una octava mas grave) tambien es
+        // un buen minimo, es mas probable que sea el fundamental verdadero.
+        if (bestTau > 0)
+        {
+            const int octaveDownTau = bestTau * 2;
+            if (octaveDownTau <= tauMax && cmndf[(size_t) octaveDownTau] < 0.20f)
+                bestTau = octaveDownTau;
+        }
+
         if (bestTau < 0)
         {
             lastFrequencyHz = 0.0f;

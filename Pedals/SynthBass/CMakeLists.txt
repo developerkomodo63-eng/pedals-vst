@@ -1,5 +1,5 @@
 juce_add_plugin(SynthBass
-    COMPANY_NAME                "yourcompany"
+    COMPANY_NAME                "DevKomodo"
     IS_SYNTH                    FALSE
     NEEDS_MIDI_INPUT            FALSE
     NEEDS_MIDI_OUTPUT           FALSE

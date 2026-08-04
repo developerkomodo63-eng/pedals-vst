@@ -1,32 +1,22 @@
 #include "PluginProcessor.h"
 
-juce::AudioProcessorValueTreeState::ParameterLayout FuzzBassAudioProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout OverdriveAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "FUZZ", 1 }, "Fuzz", 0.0f, 1.0f, 0.7f));
+        juce::ParameterID { "DRIVE", 1 }, "Drive", 1.0f, 40.0f, 12.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "DRIVE", 1 }, "Drive",
-        juce::NormalisableRange<float> { 1.0f, 100.0f, 0.0f, 0.35f }, 25.0f));
+        juce::ParameterID { "TONE", 1 }, "Tone", 1000.0f, 8000.0f, 4500.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "BIAS", 1 }, "Bias", -1.0f, 1.0f, 0.0f));
-
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "TONE", 1 }, "Tone", 500.0f, 6000.0f, 2500.0f));
-
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "MIX", 1 }, "Mix", 0.0f, 1.0f, 0.6f));
-
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "LEVEL", 1 }, "Level", -24.0f, 6.0f, -6.0f));
+        juce::ParameterID { "LEVEL", 1 }, "Level", -24.0f, 6.0f, 0.0f));
 
     return { params.begin(), params.end() };
 }
 
-FuzzBassAudioProcessor::FuzzBassAudioProcessor()
+OverdriveAudioProcessor::OverdriveAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
@@ -40,11 +30,11 @@ FuzzBassAudioProcessor::FuzzBassAudioProcessor()
 {
 }
 
-FuzzBassAudioProcessor::~FuzzBassAudioProcessor()
+OverdriveAudioProcessor::~OverdriveAudioProcessor()
 {
 }
 
-void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void OverdriveAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
@@ -53,11 +43,13 @@ void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     hpFilter.prepare(spec);
     hpFilter.setType(juce::dsp::StateVariableTPTFilterType::highpass);
-    hpFilter.setCutoffFrequency(40.0f);
+    hpFilter.setCutoffFrequency(120.0f);
 
     lpFilter.prepare(spec);
     lpFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
 
+    // 2x oversampling solo alrededor de la saturacion, para no pagar el
+    // costo de CPU en toda la cadena. IIR polifase = liviano, sin fase lineal.
     oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
         (size_t) spec.numChannels,
         1,
@@ -68,15 +60,13 @@ void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     dcBlockerX1.assign((size_t) spec.numChannels, 0.0f);
     dcBlockerY1.assign((size_t) spec.numChannels, 0.0f);
-
-    dryBuffer.setSize ((int) spec.numChannels, samplesPerBlock);
 }
 
-void FuzzBassAudioProcessor::releaseResources()
+void OverdriveAudioProcessor::releaseResources()
 {
 }
 
-bool FuzzBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool OverdriveAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -95,33 +85,19 @@ bool FuzzBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
   #endif
 }
 
-float FuzzBassAudioProcessor::processFuzzSample (float x, float hardness, float bias) noexcept
+float OverdriveAudioProcessor::processSaturationSample (float x) noexcept
 {
-    const float biased = x + bias * 0.3f;
+    // sesgo asimetrico -> algo de 2do armonico, mas cerca de una valvula
+    // que un clipper simetrico puro
+    constexpr float bias = 0.12f;
+    const float biased = x + bias;
+    const float cubic = biased - (biased * biased * biased) * 0.14f;
+    const float shaped = std::tanh(cubic);
 
-    // blend entre tanh (fuzz suave, mas redondo) y un clipper tipo diodo
-    // (exponencial: se acerca mucho a +-1 sin la "meseta" plana de un clip
-    // digital duro, se parece mas a como satura un fuzz real a transistores)
-    const float diodeAmount = 1.0f + hardness * 7.0f;
-    auto diodeClip = [diodeAmount] (float v) noexcept
-    {
-        const float sign = (v >= 0.0f) ? 1.0f : -1.0f;
-        return sign * (1.0f - std::exp (-diodeAmount * std::abs (v)));
-    };
-
-    const float soft = std::tanh (biased);
-    const float hard = diodeClip (biased);
-    const float shaped = soft * (1.0f - hardness) + hard * hardness;
-
-    const float restBias = bias * 0.3f;
-    const float softRest = std::tanh (restBias);
-    const float hardRest = diodeClip (restBias);
-    const float rest = softRest * (1.0f - hardness) + hardRest * hardness;
-
-    return shaped - rest;
+    return shaped - std::tanh(bias - (bias * bias * bias) * 0.14f);
 }
 
-void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void OverdriveAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
@@ -132,20 +108,14 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    const float fuzzAmount = apvts.getRawParameterValue("FUZZ")->load();
-    const float drive       = apvts.getRawParameterValue("DRIVE")->load();
-    const float bias        = apvts.getRawParameterValue("BIAS")->load();
-    const float toneCutoff  = apvts.getRawParameterValue("TONE")->load();
-    const float mix         = apvts.getRawParameterValue("MIX")->load();
-    const float levelDb     = apvts.getRawParameterValue("LEVEL")->load();
-    const float outputGain  = juce::Decibels::decibelsToGain(levelDb);
+    const float drive = apvts.getRawParameterValue("DRIVE")->load();
+    const float toneCutoff = apvts.getRawParameterValue("TONE")->load();
+    const float levelDb = apvts.getRawParameterValue("LEVEL")->load();
+    const float outputGain = juce::Decibels::decibelsToGain(levelDb);
 
     lpFilter.setCutoffFrequency(toneCutoff);
 
     const int numSamples = buffer.getNumSamples();
-
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-        dryBuffer.copyFrom (channel, 0, buffer, channel, 0, numSamples);
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
@@ -167,7 +137,7 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         for (size_t sample = 0; sample < numOSSamples; ++sample)
         {
             const float drivenSample = data[sample] * drive;
-            data[sample] = processFuzzSample (drivenSample, fuzzAmount, bias);
+            data[sample] = processSaturationSample (drivenSample);
         }
     }
 
@@ -176,37 +146,37 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         float* channelData = buffer.getWritePointer (channel);
-        const float* dry = dryBuffer.getReadPointer (channel);
         float& x1 = dcBlockerX1[(size_t) channel];
         float& y1 = dcBlockerY1[(size_t) channel];
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            const float toneSample = lpFilter.processSample (channel, channelData[sample]);
+            float toneSample = lpFilter.processSample (channel, channelData[sample]);
 
+            // DC blocker de un polo: y[n] = x[n] - x[n-1] + R*y[n-1]
             const float x0 = toneSample;
             const float y0 = x0 - x1 + dcBlockerR * y1;
             x1 = x0;
             y1 = y0;
 
-            channelData[sample] = (dry[sample] * (1.0f - mix) + y0 * mix) * outputGain;
+            channelData[sample] = y0 * outputGain;
         }
     }
 }
 
-juce::AudioProcessorEditor* FuzzBassAudioProcessor::createEditor()
+juce::AudioProcessorEditor* OverdriveAudioProcessor::createEditor()
 {
     return new juce::GenericAudioProcessorEditor(*this);
 }
 
-void FuzzBassAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void OverdriveAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
     copyXmlToBinary (*xml, destData);
 }
 
-void FuzzBassAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void OverdriveAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
     if (xmlState.get() != nullptr)
@@ -216,5 +186,5 @@ void FuzzBassAudioProcessor::setStateInformation (const void* data, int sizeInBy
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new FuzzBassAudioProcessor();
+    return new OverdriveAudioProcessor();
 }

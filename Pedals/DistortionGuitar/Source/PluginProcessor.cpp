@@ -1,32 +1,29 @@
 #include "PluginProcessor.h"
 
-juce::AudioProcessorValueTreeState::ParameterLayout FuzzBassAudioProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout DistortionGuitarAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "FUZZ", 1 }, "Fuzz", 0.0f, 1.0f, 0.7f));
-
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "DRIVE", 1 }, "Drive",
-        juce::NormalisableRange<float> { 1.0f, 100.0f, 0.0f, 0.35f }, 25.0f));
+        juce::NormalisableRange<float> { 1.0f, 50.0f, 0.0f, 0.4f }, 15.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "BIAS", 1 }, "Bias", -1.0f, 1.0f, 0.0f));
+        juce::ParameterID { "SCOOP", 1 }, "Scoop", 0.0f, 1.0f, 0.6f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "TONE", 1 }, "Tone", 500.0f, 6000.0f, 2500.0f));
+        juce::ParameterID { "TONE", 1 }, "Tone", 1000.0f, 8000.0f, 4000.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "MIX", 1 }, "Mix", 0.0f, 1.0f, 0.6f));
+        juce::ParameterID { "MIX", 1 }, "Mix", 0.0f, 1.0f, 1.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "LEVEL", 1 }, "Level", -24.0f, 6.0f, -6.0f));
+        juce::ParameterID { "LEVEL", 1 }, "Level", -24.0f, 6.0f, -4.0f));
 
     return { params.begin(), params.end() };
 }
 
-FuzzBassAudioProcessor::FuzzBassAudioProcessor()
+DistortionGuitarAudioProcessor::DistortionGuitarAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
@@ -40,12 +37,14 @@ FuzzBassAudioProcessor::FuzzBassAudioProcessor()
 {
 }
 
-FuzzBassAudioProcessor::~FuzzBassAudioProcessor()
+DistortionGuitarAudioProcessor::~DistortionGuitarAudioProcessor()
 {
 }
 
-void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void DistortionGuitarAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    currentSampleRate = sampleRate;
+
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = (juce::uint32) samplesPerBlock;
@@ -53,10 +52,14 @@ void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     hpFilter.prepare(spec);
     hpFilter.setType(juce::dsp::StateVariableTPTFilterType::highpass);
-    hpFilter.setCutoffFrequency(40.0f);
+    hpFilter.setCutoffFrequency(100.0f);
 
     lpFilter.prepare(spec);
     lpFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+
+    scoopFilters.resize ((size_t) spec.numChannels);
+    for (auto& f : scoopFilters)
+        f.reset();
 
     oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
         (size_t) spec.numChannels,
@@ -72,11 +75,11 @@ void FuzzBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     dryBuffer.setSize ((int) spec.numChannels, samplesPerBlock);
 }
 
-void FuzzBassAudioProcessor::releaseResources()
+void DistortionGuitarAudioProcessor::releaseResources()
 {
 }
 
-bool FuzzBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool DistortionGuitarAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -95,33 +98,17 @@ bool FuzzBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
   #endif
 }
 
-float FuzzBassAudioProcessor::processFuzzSample (float x, float hardness, float bias) noexcept
+float DistortionGuitarAudioProcessor::processDistortionSample (float x) noexcept
 {
-    const float biased = x + bias * 0.3f;
-
-    // blend entre tanh (fuzz suave, mas redondo) y un clipper tipo diodo
-    // (exponencial: se acerca mucho a +-1 sin la "meseta" plana de un clip
-    // digital duro, se parece mas a como satura un fuzz real a transistores)
-    const float diodeAmount = 1.0f + hardness * 7.0f;
-    auto diodeClip = [diodeAmount] (float v) noexcept
-    {
-        const float sign = (v >= 0.0f) ? 1.0f : -1.0f;
-        return sign * (1.0f - std::exp (-diodeAmount * std::abs (v)));
-    };
-
-    const float soft = std::tanh (biased);
-    const float hard = diodeClip (biased);
-    const float shaped = soft * (1.0f - hardness) + hard * hardness;
-
-    const float restBias = bias * 0.3f;
-    const float softRest = std::tanh (restBias);
-    const float hardRest = diodeClip (restBias);
-    const float rest = softRest * (1.0f - hardness) + hardRest * hardness;
-
-    return shaped - rest;
+    // clip simetrico y relativamente duro (sin sesgo de bias como el Fuzz):
+    // el caracter tipo pedal de distorsion "clasico" viene de un op-amp
+    // recortando parejo para los dos lados, no de una asimetria tipo valvula
+    constexpr float hardness = 6.0f;
+    const float sign = (x >= 0.0f) ? 1.0f : -1.0f;
+    return sign * (1.0f - std::exp (-hardness * std::abs (x)));
 }
 
-void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void DistortionGuitarAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
@@ -132,15 +119,22 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    const float fuzzAmount = apvts.getRawParameterValue("FUZZ")->load();
-    const float drive       = apvts.getRawParameterValue("DRIVE")->load();
-    const float bias        = apvts.getRawParameterValue("BIAS")->load();
-    const float toneCutoff  = apvts.getRawParameterValue("TONE")->load();
-    const float mix         = apvts.getRawParameterValue("MIX")->load();
-    const float levelDb     = apvts.getRawParameterValue("LEVEL")->load();
-    const float outputGain  = juce::Decibels::decibelsToGain(levelDb);
+    const float drive      = apvts.getRawParameterValue("DRIVE")->load();
+    const float scoop      = apvts.getRawParameterValue("SCOOP")->load();
+    const float toneCutoff = apvts.getRawParameterValue("TONE")->load();
+    const float mix        = apvts.getRawParameterValue("MIX")->load();
+    const float levelDb    = apvts.getRawParameterValue("LEVEL")->load();
+    const float outputGain = juce::Decibels::decibelsToGain(levelDb);
 
     lpFilter.setCutoffFrequency(toneCutoff);
+
+    // scoop de medios: peak filter con ganancia negativa alrededor de 650Hz.
+    // Los coeficientes se comparten (son los mismos para L y R), pero el
+    // estado interno de cada filtro de canal es independiente.
+    auto scoopCoeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        currentSampleRate, 650.0f, 0.8f, juce::Decibels::decibelsToGain (-9.0f * scoop));
+    for (auto& f : scoopFilters)
+        *f.coefficients = *scoopCoeffs;
 
     const int numSamples = buffer.getNumSamples();
 
@@ -167,7 +161,7 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         for (size_t sample = 0; sample < numOSSamples; ++sample)
         {
             const float drivenSample = data[sample] * drive;
-            data[sample] = processFuzzSample (drivenSample, fuzzAmount, bias);
+            data[sample] = processDistortionSample (drivenSample);
         }
     }
 
@@ -182,7 +176,8 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            const float toneSample = lpFilter.processSample (channel, channelData[sample]);
+            float scooped = scoopFilters[(size_t) channel].processSample (channelData[sample]);
+            float toneSample = lpFilter.processSample (channel, scooped);
 
             const float x0 = toneSample;
             const float y0 = x0 - x1 + dcBlockerR * y1;
@@ -194,19 +189,19 @@ void FuzzBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     }
 }
 
-juce::AudioProcessorEditor* FuzzBassAudioProcessor::createEditor()
+juce::AudioProcessorEditor* DistortionGuitarAudioProcessor::createEditor()
 {
     return new juce::GenericAudioProcessorEditor(*this);
 }
 
-void FuzzBassAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void DistortionGuitarAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
     copyXmlToBinary (*xml, destData);
 }
 
-void FuzzBassAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void DistortionGuitarAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
     if (xmlState.get() != nullptr)
@@ -216,5 +211,5 @@ void FuzzBassAudioProcessor::setStateInformation (const void* data, int sizeInBy
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new FuzzBassAudioProcessor();
+    return new DistortionGuitarAudioProcessor();
 }
