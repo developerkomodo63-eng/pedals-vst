@@ -122,3 +122,67 @@ jobs:
           path: |
             build/Pedals/Delay/Delay_artefacts/Release/VST3/**
             build/Pedals/Delay/Delay_artefacts/Release/Standalone/**
+
+      - name: Subir Noise Gate (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoiseGate-Windows
+          path: |
+            build/Pedals/NoiseGate/NoiseGate_artefacts/Release/VST3/**
+            build/Pedals/NoiseGate/NoiseGate_artefacts/Release/Standalone/**
+
+      - name: Subir Boost (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boost-Windows
+          path: |
+            build/Pedals/Boost/Boost_artefacts/Release/VST3/**
+            build/Pedals/Boost/Boost_artefacts/Release/Standalone/**
+
+      - name: Subir Ring Modulator (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RingModulator-Windows
+          path: |
+            build/Pedals/RingModulator/RingModulator_artefacts/Release/VST3/**
+            build/Pedals/RingModulator/RingModulator_artefacts/Release/Standalone/**
+
+      - name: Subir EQ (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EQ-Windows
+          path: |
+            build/Pedals/EQ/EQ_artefacts/Release/VST3/**
+            build/Pedals/EQ/EQ_artefacts/Release/Standalone/**
+
+      - name: Subir Overdrive Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: OverdriveBass-Windows
+          path: |
+            build/Pedals/OverdriveBass/OverdriveBass_artefacts/Release/VST3/**
+            build/Pedals/OverdriveBass/OverdriveBass_artefacts/Release/Standalone/**
+
+      - name: Subir Chorus Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChorusBass-Windows
+          path: |
+            build/Pedals/ChorusBass/ChorusBass_artefacts/Release/VST3/**
+            build/Pedals/ChorusBass/ChorusBass_artefacts/Release/Standalone/**
+
+      - name: Subir Reverb Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReverbBass-Windows
+          path: |
+            build/Pedals/ReverbBass/ReverbBass_artefacts/Release/VST3/**
+            build/Pedals/ReverbBass/ReverbBass_artefacts/Release/Standalone/**
+
+      - name: Subir Phaser Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhaserBass-Windows
+          path: |
+            build/Pedals/PhaserBass/PhaserBass_artefacts/Release/VST3/**
+            build/Pedals/PhaserBass/PhaserBass_artefacts/Release/Standalone/**

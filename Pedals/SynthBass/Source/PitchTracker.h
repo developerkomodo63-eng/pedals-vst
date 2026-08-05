@@ -152,6 +152,10 @@ private:
             return;
         }
 
+        // confianza de esta estimacion: cuanto mas bajo el valor de cmndf,
+        // mas "limpia" (periodica) era la señal en esta ventana
+        const float confidence = cmndf[(size_t) bestTau];
+
         // interpolacion parabolica para afinar la estimacion entre muestras enteras de tau
         float refinedTau = (float) bestTau;
         if (bestTau > tauMin && bestTau < tauMax)
@@ -166,14 +170,22 @@ private:
 
         const float rawFrequencyHz = (refinedTau > 0.0f) ? (float) (sampleRate / refinedTau) : 0.0f;
 
-        // debounce: solo confirmamos una nota nueva si dos hops seguidos
-        // coinciden dentro de +-6% (~1 semitono). Esto filtra los errores
-        // de octava y el jitter de un solo hop que suelen venir de pulsaciones
-        // ruidosas, a costa de un hop extra de latencia en notas nuevas.
+        // debounce adaptativo: si la deteccion es muy confiable (nota limpia,
+        // sola, bien afinada), la confirmamos ya mismo -- esto es clave para
+        // riffs rapidos, donde esperar un hop extra en cada nota hace que el
+        // tracking siempre vaya atrasado. Solo cuando la deteccion es dudosa
+        // (ataque con transitorio, cuerdas que suenan juntas, ruido) pedimos
+        // que dos hops seguidos coincidan antes de confirmar el cambio.
+        constexpr float highConfidenceThreshold = 0.05f;
         bool accept = false;
+
         if (confirmedFrequencyHz <= 0.0f)
         {
-            accept = true; // primera deteccion: sin nota previa, no hay nada que debounce-ar
+            accept = true; // primera deteccion: no hay nada que debounce-ar
+        }
+        else if (confidence < highConfidenceThreshold)
+        {
+            accept = true; // deteccion muy limpia, no hace falta esperar confirmacion
         }
         else if (previousRawFrequencyHz > 0.0f)
         {

@@ -59,7 +59,7 @@ void SynthBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     // rango de tracking para bajo: hasta el Mi grave de 5 cuerdas (~31 Hz),
     // ventana mas grande porque las frecuencias bajas necesitan mas
     // muestras para resolver un periodo completo con precision
-    pitchTracker.prepare (sampleRate, 4096, 2048, 25.0f, 500.0f);
+    pitchTracker.prepare (sampleRate, 4096, 1024, 25.0f, 500.0f);
 
     oscillatorMain.setSampleRate (sampleRate);
     oscillatorMain.reset();

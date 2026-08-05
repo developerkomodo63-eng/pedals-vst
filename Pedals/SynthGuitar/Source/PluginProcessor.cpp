@@ -58,7 +58,7 @@ void SynthGuitarAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 
     // rango de tracking para guitarra: Mi grave (~82 Hz, con margen para
     // afinaciones bajas) hasta bien arriba del diapason
-    pitchTracker.prepare (sampleRate, 2048, 1024, 70.0f, 1200.0f);
+    pitchTracker.prepare (sampleRate, 2048, 512, 70.0f, 1200.0f);
 
     oscillatorMain.setSampleRate (sampleRate);
     oscillatorMain.reset();
