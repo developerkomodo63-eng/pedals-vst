@@ -186,3 +186,67 @@ jobs:
           path: |
             build/Pedals/PhaserBass/PhaserBass_artefacts/Release/VST3/**
             build/Pedals/PhaserBass/PhaserBass_artefacts/Release/Standalone/**
+
+      - name: Subir Envelope Filter Guitar (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnvelopeFilterGuitar-Windows
+          path: |
+            build/Pedals/EnvelopeFilterGuitar/EnvelopeFilterGuitar_artefacts/Release/VST3/**
+            build/Pedals/EnvelopeFilterGuitar/EnvelopeFilterGuitar_artefacts/Release/Standalone/**
+
+      - name: Subir Envelope Filter Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnvelopeFilterBass-Windows
+          path: |
+            build/Pedals/EnvelopeFilterBass/EnvelopeFilterBass_artefacts/Release/VST3/**
+            build/Pedals/EnvelopeFilterBass/EnvelopeFilterBass_artefacts/Release/Standalone/**
+
+      - name: Subir Octaver Guitar (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: OctaverGuitar-Windows
+          path: |
+            build/Pedals/OctaverGuitar/OctaverGuitar_artefacts/Release/VST3/**
+            build/Pedals/OctaverGuitar/OctaverGuitar_artefacts/Release/Standalone/**
+
+      - name: Subir Octaver Bass (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: OctaverBass-Windows
+          path: |
+            build/Pedals/OctaverBass/OctaverBass_artefacts/Release/VST3/**
+            build/Pedals/OctaverBass/OctaverBass_artefacts/Release/Standalone/**
+
+      - name: Subir Multiband Compressor (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MultibandCompressor-Windows
+          path: |
+            build/Pedals/MultibandCompressor/MultibandCompressor_artefacts/Release/VST3/**
+            build/Pedals/MultibandCompressor/MultibandCompressor_artefacts/Release/Standalone/**
+
+      - name: Subir Preamp (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Preamp-Windows
+          path: |
+            build/Pedals/Preamp/Preamp_artefacts/Release/VST3/**
+            build/Pedals/Preamp/Preamp_artefacts/Release/Standalone/**
+
+      - name: Subir Flanger (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flanger-Windows
+          path: |
+            build/Pedals/Flanger/Flanger_artefacts/Release/VST3/**
+            build/Pedals/Flanger/Flanger_artefacts/Release/Standalone/**
+
+      - name: Subir AmpSim (VST3 + Standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmpSim-Windows
+          path: |
+            build/Pedals/AmpSim/AmpSim_artefacts/Release/VST3/**
+            build/Pedals/AmpSim/AmpSim_artefacts/Release/Standalone/**
