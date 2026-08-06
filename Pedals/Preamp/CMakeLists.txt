@@ -7,7 +7,7 @@ juce_add_plugin(Preamp
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 Pre1
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Preamp")
 
 target_sources(Preamp

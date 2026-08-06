@@ -165,7 +165,6 @@ void MultibandCompressorAudioProcessor::processBlock (juce::AudioBuffer<float>& 
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // 1) separar cada canal en sus 3 bandas
         for (int channel = 0; channel < channelsToProcess && channel < 2; ++channel)
         {
             const float in = buffer.getReadPointer (channel)[sample];
@@ -179,8 +178,8 @@ void MultibandCompressorAudioProcessor::processBlock (juce::AudioBuffer<float>& 
             bandsPerChannel[channel] = { low, mid, high };
         }
 
-        // 2) la deteccion de nivel y la reduccion de ganancia se calculan
-        //    sobre el canal 0 y se linkean a todos los canales
+        // deteccion y reduccion de ganancia linkeadas al canal 0, aplicadas
+        // igual a todos los canales
         std::array<float, 3> bandGain;
         for (int b = 0; b < 3; ++b)
         {
@@ -200,7 +199,6 @@ void MultibandCompressorAudioProcessor::processBlock (juce::AudioBuffer<float>& 
             bandGain[(size_t) b] = juce::Decibels::decibelsToGain (-gainReductionDb) * makeups[(size_t) b];
         }
 
-        // 3) aplicar la ganancia de cada banda y sumar de vuelta
         for (int channel = 0; channel < channelsToProcess; ++channel)
         {
             const int srcChannel = juce::jmin (channel, 1);

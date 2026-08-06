@@ -7,7 +7,7 @@ juce_add_plugin(ReverbBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 RvBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Reverb Bass")
 
 target_sources(ReverbBass

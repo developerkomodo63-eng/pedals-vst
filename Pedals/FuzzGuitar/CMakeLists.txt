@@ -7,7 +7,7 @@ juce_add_plugin(FuzzGuitar
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 FzGt
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Fuzz Guitar")
 
 target_sources(FuzzGuitar

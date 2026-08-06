@@ -7,7 +7,7 @@ juce_add_plugin(Chorus
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 Chr1
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Chorus")
 
 target_sources(Chorus

@@ -7,7 +7,7 @@ juce_add_plugin(ChorusBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 ChBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Chorus Bass")
 
 target_sources(ChorusBass

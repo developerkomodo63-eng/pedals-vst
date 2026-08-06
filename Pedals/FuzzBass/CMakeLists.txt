@@ -7,7 +7,7 @@ juce_add_plugin(FuzzBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 FzBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Fuzz Bass")
 
 target_sources(FuzzBass

@@ -7,7 +7,7 @@ juce_add_plugin(OctaverGuitar
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 OcGt
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Octaver Guitar")
 
 target_sources(OctaverGuitar

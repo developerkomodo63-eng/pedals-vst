@@ -23,7 +23,11 @@ public:
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 2.5; }
+    // Con Feedback alto (0.95) y Time al maximo (2000ms), la cola real tarda
+    // muchisimo mas que unos pocos segundos en apagarse del todo. Reportamos
+    // un valor generoso para que el host no corte el eco de golpe al hacer
+    // bypass o parar la reproduccion; no es "infinito" pero cubre el uso normal.
+    double getTailLengthSeconds() const override { return 10.0; }
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }

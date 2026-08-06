@@ -7,7 +7,7 @@ juce_add_plugin(DistortionBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 DsBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Distortion Bass")
 
 target_sources(DistortionBass

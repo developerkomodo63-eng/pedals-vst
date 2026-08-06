@@ -7,7 +7,7 @@ juce_add_plugin(PhaserBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 PhBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Phaser Bass")
 
 target_sources(PhaserBass

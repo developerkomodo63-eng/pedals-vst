@@ -7,7 +7,7 @@ juce_add_plugin(OverdriveBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 OvBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Overdrive Bass")
 
 target_sources(OverdriveBass

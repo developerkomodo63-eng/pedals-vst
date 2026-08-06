@@ -7,7 +7,7 @@ juce_add_plugin(EnvelopeFilterBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 EnBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Envelope Filter Bass")
 
 target_sources(EnvelopeFilterBass

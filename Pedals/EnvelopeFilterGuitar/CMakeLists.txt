@@ -7,7 +7,7 @@ juce_add_plugin(EnvelopeFilterGuitar
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 EnGt
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Envelope Filter Guitar")
 
 target_sources(EnvelopeFilterGuitar

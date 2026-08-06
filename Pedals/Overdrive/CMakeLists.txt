@@ -7,7 +7,7 @@ juce_add_plugin(Overdrive
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 Xbzs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Overdrive")
 
 target_sources(Overdrive

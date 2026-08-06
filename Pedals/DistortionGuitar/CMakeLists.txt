@@ -7,7 +7,7 @@ juce_add_plugin(DistortionGuitar
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 DsGt
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Distortion Guitar")
 
 target_sources(DistortionGuitar

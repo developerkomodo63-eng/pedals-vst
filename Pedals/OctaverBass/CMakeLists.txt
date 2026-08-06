@@ -7,7 +7,7 @@ juce_add_plugin(OctaverBass
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 OcBs
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Octaver Bass")
 
 target_sources(OctaverBass

@@ -7,7 +7,7 @@ juce_add_plugin(MultibandCompressor
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 Mbc1
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Multiband Compressor")
 
 target_sources(MultibandCompressor

@@ -7,7 +7,7 @@ juce_add_plugin(SynthGuitar
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 SyGt
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "Synth Guitar")
 
 target_sources(SynthGuitar

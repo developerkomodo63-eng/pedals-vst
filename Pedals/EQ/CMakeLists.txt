@@ -7,7 +7,7 @@ juce_add_plugin(EQ
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     PLUGIN_MANUFACTURER_CODE    Manu
     PLUGIN_CODE                 Eq31
-    FORMATS                     VST3 Standalone
+    FORMATS                     VST3
     PRODUCT_NAME                "EQ 6-Band")
 
 target_sources(EQ
