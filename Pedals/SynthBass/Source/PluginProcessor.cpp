@@ -209,14 +209,14 @@ void SynthBassAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
 juce::AudioProcessorEditor* SynthBassAudioProcessor::createEditor()
 {
-    static constexpr std::array<SynthPedalEditor<SynthBassAudioProcessor>::Preset, 6> presets = {
+    static constexpr std::array<SynthPedalEditor<SynthBassAudioProcessor>::Preset, 6> presets = {{
         { "Deep Clean", 2, 0, 8.0f, 3.0f, 0.75f, -43.0f, 0.50f, -1.0f },
         { "Sub Bass", 1, -1, 18.0f, 5.0f, 0.95f, -40.0f, 0.72f, -2.0f },
         { "Analog Bass", 0, 0, 24.0f, 10.0f, 0.65f, -38.0f, 0.70f, -1.0f },
         { "Wide Bass", 0, 0, 45.0f, 24.0f, 0.55f, -36.0f, 0.68f, -2.0f },
         { "Octave Growl", 1, -1, 30.0f, 16.0f, 0.85f, -35.0f, 0.80f, -3.0f },
         { "Synth Bass", 0, 1, 12.0f, 12.0f, 0.45f, -37.0f, 0.75f, -2.0f }
-    };
+    }};
     return new SynthPedalEditor<SynthBassAudioProcessor> (*this, "SYNTH BASS", presets, juce::Colour::fromRGB (95, 220, 170));
 }
 

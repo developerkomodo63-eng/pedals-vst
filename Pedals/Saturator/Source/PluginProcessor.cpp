@@ -13,8 +13,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout SaturatorAudioProcessor::cre
 }
 SaturatorAudioProcessor::SaturatorAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
- : AudioProcessor (BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true).withOutput("Output", juce::AudioChannelSet::stereo(), true))
-#endif {}
+     : AudioProcessor (BusesProperties()
+                     #if ! JucePlugin_IsMidiEffect
+                      #if ! JucePlugin_IsSynth
+                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                      #endif
+                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                     #endif
+                       )
+#endif
+{
+}
+
 void SaturatorAudioProcessor::prepareToPlay (double sr, int block)
 {
     sampleRate = sr;

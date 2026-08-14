@@ -20,9 +20,10 @@ void VocalShifterAudioProcessor::prepareToPlay(double sr,int block)
 {
     sampleRate=sr;
     juce::dsp::ProcessSpec spec{sr,(juce::uint32)block,(juce::uint32)getTotalNumOutputChannels()};
-    shifter=std::make_unique<juce::dsp::PitchShifter<float>>();
-    shifter->prepare(spec);
-    shifter->setPitchRatio(1.0f);
+    juce::ignoreUnused (spec);
+    shifter.prepare (sr, getTotalNumOutputChannels());
+    shifter.reset();
+    shifter.setPitchRatio (1.0f);
     dryBuffer.setSize(getTotalNumOutputChannels(),block,false,false,true);
     formants.resize(getTotalNumOutputChannels());
     for(auto& f:formants) f.reset();
@@ -46,10 +47,13 @@ void VocalShifterAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,j
     const float output=juce::Decibels::decibelsToGain(apvts.getRawParameterValue("OUTPUT")->load());
     float ratio=std::pow(2.0f,pitch/12.0f);
     if(mode==1) ratio=std::pow(2.0f,std::round(pitch)/12.0f);
-    shifter->setPitchRatio(ratio);
-    juce::dsp::AudioBlock<float> block(buffer);
-    juce::dsp::ProcessContextReplacing<float> ctx(block);
-    shifter->process(ctx);
+    shifter.setPitchRatio (ratio);
+    for (int c = 0; c < in; ++c)
+    {
+        float* d = buffer.getWritePointer (c);
+        for (int s = 0; s < n; ++s)
+            d[s] = shifter.processSample (c, d[s]);
+    }
     const float formantRatio=std::pow(2.0f,formant/12.0f);
     const float modeHigh=(mode==2?1.8f:(mode==3?0.55f:1.0f));
     const float driveGain=juce::Decibels::decibelsToGain(drive);
