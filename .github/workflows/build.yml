@@ -1,0 +1,36 @@
+name: Build DevKomodo Pedals VST3
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compilar todos los pedales
+        run: cmake --build build --config Release --parallel
+
+      - name: Reunir todos los .vst3 en una sola carpeta
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path allvst3 | Out-Null
+          Get-ChildItem -Path build -Recurse -Directory -Filter "VST3" | ForEach-Object {
+            Copy-Item -Path "$($_.FullName)\*" -Destination "allvst3" -Recurse -Force
+          }
+          Write-Host "Pedales reunidos:"
+          Get-ChildItem -Path allvst3 -Directory | ForEach-Object { Write-Host " - $($_.Name)" }
+
+      - name: Subir todos los pedales (un solo artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevKomodo-Pedals-VST3
+          path: allvst3/**
